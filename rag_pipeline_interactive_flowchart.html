@@ -1,0 +1,367 @@
+
+<h2 class="sr-only">Interactive RAG PDF Chatbot Pipeline — click each stage to explore code, visuals, and data flow</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{padding:1rem 0;font-family:var(--font-sans)}
+.title{font-size:14px;font-weight:500;color:var(--color-text-secondary);margin-bottom:12px;letter-spacing:.04em}
+.pipeline{display:flex;align-items:center;gap:0;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
+.stage{display:flex;align-items:center;gap:0;flex-shrink:0}
+.node{cursor:pointer;border-radius:8px;border:1.5px solid transparent;padding:8px 10px;min-width:72px;text-align:center;transition:all .18s;user-select:none}
+.node:hover{transform:translateY(-2px)}
+.node.active{border-width:2px;box-shadow:0 0 0 3px var(--glow)}
+.node-icon{font-size:18px;margin-bottom:2px}
+.node-label{font-size:10px;font-weight:500;line-height:1.2}
+.arrow{color:var(--color-text-tertiary);font-size:14px;padding:0 2px;flex-shrink:0}
+.panel{margin-top:14px;border:0.5px solid var(--color-border-secondary);border-radius:12px;overflow:hidden;min-height:200px}
+.panel-head{padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.panel-title{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.panel-sub{font-size:12px;color:var(--color-text-secondary);margin-left:auto}
+.panel-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.code-col{padding:12px;border-right:0.5px solid var(--color-border-tertiary);background:var(--color-background-secondary)}
+.vis-col{padding:12px}
+pre{font-family:var(--font-mono);font-size:11px;line-height:1.6;color:var(--color-text-primary);white-space:pre-wrap;word-break:break-word}
+.kw{color:#7F77DD}.fn{color:#1D9E75}.str{color:#BA7517}.cm{color:var(--color-text-tertiary);font-style:italic}
+.vis-title{font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px}
+.chunk-box{border-radius:6px;padding:7px 9px;font-size:11px;line-height:1.5;margin-bottom:6px;position:relative;border:0.5px solid transparent}
+.chunk-a{background:#E1F5EE;border-color:#5DCAA5;color:#085041}
+.chunk-b{background:#EEEDFE;border-color:#AFA9EC;color:#26215C}
+.chunk-c{background:#FAEEDA;border-color:#EF9F27;color:#412402}
+.overlap{background:#E6F1FB;border-color:#85B7EB;color:#042C53;font-size:10px;padding:4px 8px;border-radius:4px;margin:-2px 0 6px 16px}
+.vec-row{display:flex;align-items:center;gap:4px;margin-bottom:5px;font-size:11px}
+.vec-label{width:56px;font-weight:500;color:var(--color-text-secondary);font-size:10px;flex-shrink:0}
+.vec-bar{height:14px;border-radius:3px;transition:width .4s;min-width:4px}
+.vec-val{font-family:var(--font-mono);font-size:10px;color:var(--color-text-tertiary);min-width:36px}
+.faiss-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.faiss-cell{border-radius:6px;padding:6px;text-align:center;border:0.5px solid transparent;cursor:pointer;transition:all .15s}
+.faiss-cell:hover{transform:scale(1.04)}
+.faiss-cell .fi{font-size:10px;font-weight:500;margin-bottom:2px}
+.faiss-cell .fv{font-family:var(--font-mono);font-size:9px;color:var(--color-text-tertiary)}
+.qa-flow{display:flex;flex-direction:column;gap:6px}
+.qa-box{border-radius:6px;padding:7px 10px;font-size:11px;border:0.5px solid transparent}
+.q-box{background:#FAECE7;border-color:#F0997B;color:#4A1B0C}
+.r-box{background:#E1F5EE;border-color:#5DCAA5;color:#04342C}
+.m-box{background:#EEEDFE;border-color:#AFA9EC;color:#26215C}
+.a-box{background:#EAF3DE;border-color:#97C459;color:#173404}
+.qa-arrow{text-align:center;font-size:12px;color:var(--color-text-tertiary)}
+.llm-vis{display:flex;flex-direction:column;gap:6px}
+.llm-row{display:flex;align-items:center;gap:6px;font-size:11px}
+.llm-chip{border-radius:20px;padding:3px 9px;font-size:10px;font-weight:500}
+.sim-row{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.sim-label{font-size:10px;color:var(--color-text-secondary);width:60px;flex-shrink:0}
+.sim-track{flex:1;height:8px;background:var(--color-background-secondary);border-radius:4px;overflow:hidden;border:0.5px solid var(--color-border-tertiary)}
+.sim-fill{height:100%;border-radius:4px;transition:width .5s}
+.sim-pct{font-family:var(--font-mono);font-size:10px;color:var(--color-text-tertiary);width:28px}
+.tab-row{display:flex;gap:0;margin-bottom:0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.tab{padding:6px 14px;font-size:12px;cursor:pointer;color:var(--color-text-secondary);border-bottom:2px solid transparent;transition:all .15s}
+.tab.on{color:var(--color-text-primary);border-bottom-color:var(--active-color,#7F77DD);font-weight:500}
+@media(max-width:520px){.panel-body{grid-template-columns:1fr}.code-col{border-right:none;border-bottom:0.5px solid var(--color-border-tertiary)}}
+</style>
+<div class="wrap">
+<div class="title">RAG PIPELINE — CLICK ANY STAGE</div>
+<div class="pipeline" id="pipeline"></div>
+<div class="panel" id="panel">
+  <div class="panel-head" id="ph"><span class="panel-title" id="pt">Select a stage above to explore</span><span class="panel-sub" id="ps"></span></div>
+  <div class="tab-row" id="tabs" style="display:none">
+    <div class="tab on" onclick="switchTab(0)">Code</div>
+    <div class="tab" onclick="switchTab(1)">Visual</div>
+  </div>
+  <div class="panel-body" id="pb" style="display:none">
+    <div class="code-col" id="cc"><pre id="code-pre"></pre></div>
+    <div class="vis-col" id="vc"><div class="vis-title" id="vt"></div><div id="vis"></div></div>
+  </div>
+  <div id="placeholder" style="display:flex;align-items:center;justify-content:center;height:180px;color:var(--color-text-tertiary);font-size:13px">Click a stage to begin exploring</div>
+</div>
+</div>
+<script>
+const stages=[
+{id:'upload',icon:'ti-upload',label:'PDF Upload',color:'#E1F5EE',border:'#1D9E75',glow:'#1D9E7540',text:'#04342C',lib:'Streamlit',desc:'Web UI — file uploader',
+code:`<span class="kw">import</span> streamlit <span class="kw">as</span> st
+<span class="kw">import</span> os
+
+<span class="cm"># Creates file upload widget in browser</span>
+uploaded_file = st.<span class="fn">file_uploader</span>(
+    <span class="str">"Upload your PDF file"</span>,
+    type=<span class="str">"pdf"</span>   <span class="cm"># only .pdf allowed</span>
+)
+
+<span class="kw">if</span> uploaded_file <span class="kw">is not</span> None:
+    pdf_path = <span class="fn">f</span><span class="str">"uploaded/{uploaded_file.name}"</span>
+    os.<span class="fn">makedirs</span>(<span class="str">"uploaded"</span>, exist_ok=<span class="kw">True</span>)
+    
+    <span class="cm"># "wb" = write binary mode</span>
+    <span class="kw">with</span> <span class="fn">open</span>(pdf_path, <span class="str">"wb"</span>) <span class="kw">as</span> f:
+        f.<span class="fn">write</span>(uploaded_file.<span class="fn">getbuffer</span>())`,
+vis:'upload'},
+
+{id:'extract',icon:'ti-file-text',label:'Extract Text',color:'#E1F5EE',border:'#1D9E75',glow:'#1D9E7540',text:'#04342C',lib:'PyPDF2',desc:'Page-by-page text extraction',
+code:`<span class="kw">from</span> PyPDF2 <span class="kw">import</span> PdfReader
+
+<span class="kw">def</span> <span class="fn">extract_text_from_pdf</span>(pdf_path):
+    reader = <span class="fn">PdfReader</span>(pdf_path)
+    text = <span class="str">""</span>
+    
+    <span class="cm"># Iterate every page object</span>
+    <span class="kw">for</span> page <span class="kw">in</span> reader.pages:
+        <span class="cm"># extract_text() returns string</span>
+        text += page.<span class="fn">extract_text</span>()
+    
+    <span class="kw">return</span> text  <span class="cm"># full PDF as one string</span>`,
+vis:'extract'},
+
+{id:'chunk',icon:'ti-scissors',label:'Chunk Split',color:'#FAEEDA',border:'#EF9F27',glow:'#EF9F2740',text:'#412402',lib:'LangChain',desc:'1000 chars / 200 overlap',
+code:`<span class="kw">from</span> langchain_text_splitters <span class="kw">import</span> \
+    RecursiveCharacterTextSplitter
+
+splitter = <span class="fn">RecursiveCharacterTextSplitter</span>(
+    chunk_size=<span class="str">1000</span>,   <span class="cm"># max chars per chunk</span>
+    chunk_overlap=<span class="str">200</span>  <span class="cm"># shared chars between</span>
+)                        <span class="cm"># adjacent chunks</span>
+
+<span class="cm"># Returns list of strings</span>
+chunks = splitter.<span class="fn">split_text</span>(text)
+
+<span class="cm"># Example output:</span>
+<span class="cm"># ["Chunk 1...", "Chunk 2...", ...]</span>`,
+vis:'chunk'},
+
+{id:'embed',icon:'ti-vector',label:'Embeddings',color:'#EEEDFE',border:'#7F77DD',glow:'#7F77DD40',text:'#26215C',lib:'HuggingFace',desc:'all-MiniLM-L6-v2 → 384-dim',
+code:`<span class="kw">from</span> langchain_huggingface <span class="kw">import</span> HuggingFaceEmbeddings
+
+<span class="cm"># ~80MB model, 384-dimensional vectors</span>
+embeddings = <span class="fn">HuggingFaceEmbeddings</span>(
+    model_name=<span class="str">"sentence-transformers/all-MiniLM-L6-v2"</span>
+)
+
+<span class="cm"># Each chunk becomes a 384-float vector</span>
+<span class="cm"># "Robot" → [0.44, 0.92, -0.13, ...]</span>
+<span class="cm"># Similar meaning = similar vector</span>`,
+vis:'embed'},
+
+{id:'faiss',icon:'ti-database',label:'FAISS Store',color:'#FAEEDA',border:'#EF9F27',glow:'#EF9F2740',text:'#412402',lib:'FAISS',desc:'Save & load vector index',
+code:`<span class="kw">from</span> langchain_community.vectorstores <span class="kw">import</span> FAISS
+
+<span class="cm"># Build index from all chunk vectors</span>
+vector_store = FAISS.<span class="fn">from_texts</span>(
+    chunks, embedding=embeddings
+)
+
+<span class="cm"># Persists to disk as 2 files:</span>
+<span class="cm"># faiss_index/index.faiss  (binary)</span>
+<span class="cm"># faiss_index/index.pkl    (metadata)</span>
+vector_store.<span class="fn">save_local</span>(<span class="str">"faiss_index"</span>)
+
+<span class="cm"># Later: reload for querying</span>
+vs = FAISS.<span class="fn">load_local</span>(<span class="str">"faiss_index"</span>, embeddings,
+    allow_dangerous_deserialization=<span class="kw">True</span>)`,
+vis:'faiss'},
+
+{id:'retrieve',icon:'ti-search',label:'Retrieval',color:'#FAECE7',border:'#D85A30',glow:'#D85A3040',text:'#4A1B0C',lib:'LangChain',desc:'Cosine similarity search',
+code:`<span class="cm"># Convert vector store → retriever object</span>
+retriever = vector_store.<span class="fn">as_retriever</span>()
+
+<span class="cm"># When query arrives:</span>
+<span class="cm"># 1. Embed the question (same model)</span>
+<span class="cm"># 2. Compute cosine similarity vs all chunks</span>
+<span class="cm"># 3. Return top-k most similar chunks</span>
+
+<span class="cm"># Chain type "stuff" = concatenate all</span>
+<span class="cm"># retrieved chunks into one big context</span>
+qa_chain = <span class="fn">load_qa_chain</span>(llm, chain_type=<span class="str">"stuff"</span>)
+
+qa_chain = <span class="fn">RetrievalQA</span>(
+    retriever=retriever,
+    combine_documents_chain=qa_chain
+)`,
+vis:'retrieve'},
+
+{id:'llm',icon:'ti-brain',label:'Ollama LLM',color:'#EEEDFE',border:'#7F77DD',glow:'#7F77DD40',text:'#26215C',lib:'Ollama',desc:'Local Llama3.2 generation',
+code:`<span class="kw">from</span> langchain_community.llms <span class="kw">import</span> Ollama
+
+<span class="cm"># Runs 100% locally — no API key needed</span>
+llm = <span class="fn">Ollama</span>(model=<span class="str">"llama3.2"</span>)
+
+<span class="cm"># Supported models:</span>
+<span class="cm"># llama3.2 | mistral | gemma | granite</span>
+
+<span class="cm"># Final answer generation</span>
+answer = qa_chain.<span class="fn">run</span>(question)
+st.<span class="fn">success</span>(<span class="fn">f</span><span class="str">"Answer: {answer}"</span>)`,
+vis:'llm'},
+
+{id:'answer',icon:'ti-message-check',label:'Answer',color:'#EAF3DE',border:'#639922',glow:'#63992240',text:'#173404',lib:'Streamlit',desc:'Rendered response in UI',
+code:`<span class="cm"># Full RAG question-answer loop:</span>
+question = st.<span class="fn">text_input</span>(
+    <span class="str">"Ask a question about the PDF:"</span>
+)
+
+<span class="kw">if</span> question:
+    st.<span class="fn">info</span>(<span class="str">"Querying the document..."</span>)
+    
+    <span class="cm"># This triggers the full pipeline:</span>
+    <span class="cm"># embed Q → FAISS search → top chunks</span>
+    <span class="cm"># → stuff into prompt → Llama3.2 → answer</span>
+    answer = qa_chain.<span class="fn">run</span>(question)
+    
+    st.<span class="fn">success</span>(<span class="fn">f</span><span class="str">"Answer: {answer}"</span>)`,
+vis:'answer'},
+];
+
+const visuals={
+upload:`<div class="vis-title">Streamlit UI flow</div>
+<div class="qa-flow">
+<div class="qa-box q-box">Browser → st.file_uploader("Upload PDF", type="pdf")</div>
+<div class="qa-arrow">↓</div>
+<div class="qa-box m-box">uploaded_file.getbuffer() → binary bytes</div>
+<div class="qa-arrow">↓</div>
+<div class="qa-box r-box">os.makedirs("uploaded") → open("wb") → write to disk</div>
+<div class="qa-arrow">↓</div>
+<div class="qa-box a-box">PDF saved at: uploaded/filename.pdf</div>
+</div>`,
+
+extract:`<div class="vis-title">Page extraction</div>
+<div class="chunk-box chunk-a">Page 1: "Industrial Automation is the use of..."</div>
+<div class="chunk-box chunk-b">Page 2: "PLC stands for Programmable Logic..."</div>
+<div class="chunk-box chunk-c">Page 3: "SCADA systems monitor and control..."</div>
+<div style="font-size:11px;color:var(--color-text-secondary);margin-top:8px">→ Concatenated into one long string</div>
+<div class="chunk-box" style="background:var(--color-background-secondary);border:0.5px solid var(--color-border-secondary);margin-top:6px;font-size:10px;font-family:var(--font-mono)">"Industrial Automation is...PLC stands for...SCADA systems..."</div>`,
+
+chunk:`<div class="vis-title">Chunks with 200-char overlap</div>
+<div class="chunk-box chunk-a"><b>Chunk 1</b> (chars 0–1000)<br>"Industrial Automation is the use of control systems..."</div>
+<div class="overlap">↑↓ 200 shared chars (overlap)</div>
+<div class="chunk-box chunk-b"><b>Chunk 2</b> (chars 800–1800)<br>"...control systems such as PLCs and SCADA to..."</div>
+<div class="overlap">↑↓ 200 shared chars (overlap)</div>
+<div class="chunk-box chunk-c"><b>Chunk 3</b> (chars 1600–2600)<br>"...SCADA to handle industrial processes..."</div>
+<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px">Overlap prevents context loss at boundaries</div>`,
+
+embed:`<div class="vis-title">384-dim vector preview (first 6 dims)</div>
+<div id="vec-vis"></div>
+<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">Similar words → similar vectors → similar positions in space</div>`,
+
+faiss:`<div class="vis-title">FAISS index — click a cell</div>
+<div class="faiss-grid" id="faiss-grid"></div>
+<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px" id="faiss-info">Stores all chunk embeddings for fast nearest-neighbor search</div>`,
+
+retrieve:`<div class="vis-title">Cosine similarity scores</div>
+<div id="sim-vis"></div>
+<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:8px">Top-k chunks stuffed into LLM context window</div>`,
+
+llm:`<div class="vis-title">Local LLM pipeline</div>
+<div class="llm-vis">
+<div class="qa-box q-box">User: "What is SCADA?"</div>
+<div class="qa-arrow">↓ embed question</div>
+<div class="qa-box m-box">Query vector: [0.21, -0.44, 0.87, ...]</div>
+<div class="qa-arrow">↓ FAISS top-3 chunks</div>
+<div class="qa-box" style="background:#EEEDFE;border:0.5px solid #AFA9EC;color:#26215C;font-size:10px">Context: "SCADA stands for Supervisory Control and Data Acquisition. It is used to monitor..."</div>
+<div class="qa-arrow">↓ Ollama llama3.2</div>
+<div class="qa-box a-box">Answer: "SCADA is a system used for monitoring and controlling industrial processes in real-time."</div>
+</div>`,
+
+answer:`<div class="vis-title">Complete RAG architecture</div>
+<div class="qa-flow">
+<div class="qa-box q-box">Question input</div>
+<div class="qa-arrow">↓</div>
+<div class="qa-box m-box">Embed → FAISS search</div>
+<div class="qa-arrow">↓</div>
+<div class="qa-box" style="background:#FAEEDA;border:0.5px solid #EF9F27;color:#412402">Top-k relevant chunks retrieved</div>
+<div class="qa-arrow">↓</div>
+<div class="qa-box" style="background:#EEEDFE;border:0.5px solid #AFA9EC;color:#26215C">Prompt: Context + Question → Llama3.2</div>
+<div class="qa-arrow">↓</div>
+<div class="qa-box a-box">st.success("Answer: ...")</div>
+</div>`
+};
+
+function buildVecVis(){
+const words=[{w:'Robot',vals:[0.44,0.92,-0.13,0.67,-0.31,0.55],c:'#7F77DD'},
+{w:'Machine',vals:[0.41,0.88,-0.10,0.71,-0.28,0.51],c:'#1D9E75'},
+{w:'Python',vals:[-0.22,0.34,0.77,-0.15,0.63,-0.44],c:'#BA7517'}];
+const max=1;
+let h='';
+words.forEach(w=>{
+h+=`<div style="margin-bottom:8px"><div class="vec-row"><span class="vec-label" style="color:${w.c};font-weight:500">${w.w}</span></div>`;
+w.vals.forEach((v,i)=>{
+const pct=Math.abs(v)*50;
+const col=v>0?'#7F77DD':'#D85A30';
+h+=`<div class="vec-row"><span class="vec-label">dim ${i+1}</span>
+<div class="vec-bar" style="width:${pct}px;background:${col};opacity:${0.4+Math.abs(v)*0.6}"></div>
+<span class="vec-val">${v.toFixed(2)}</span></div>`;
+});
+h+='</div>';
+});
+document.getElementById('vec-vis').innerHTML=h;
+}
+
+function buildFaiss(){
+const cells=[
+{l:'Chunk 1',s:'AI automation...',c:'#E1F5EE',bc:'#5DCAA5',tc:'#04342C'},
+{l:'Chunk 2',s:'PLC systems...',c:'#EEEDFE',bc:'#AFA9EC',tc:'#26215C'},
+{l:'Chunk 3',s:'SCADA monitor...',c:'#FAEEDA',bc:'#EF9F27',tc:'#412402'},
+{l:'Chunk 4',s:'Robot kinematics...',c:'#FAECE7',bc:'#F0997B',tc:'#4A1B0C'},
+{l:'Chunk 5',s:'Sensor fusion...',c:'#EAF3DE',bc:'#97C459',tc:'#173404'},
+{l:'Chunk 6',s:'Control loops...',c:'#E6F1FB',bc:'#85B7EB',tc:'#042C53'},
+];
+let h='';
+cells.forEach((c,i)=>{
+h+=`<div class="faiss-cell" style="background:${c.c};border-color:${c.bc}" onclick="document.getElementById('faiss-info').textContent='${c.l}: \\'${c.s}\\' → vector index ${i}'">
+<div class="fi" style="color:${c.tc}">${c.l}</div>
+<div class="fv">[v${i}₁,v${i}₂...]</div></div>`;
+});
+document.getElementById('faiss-grid').innerHTML=h;
+}
+
+function buildSim(){
+const rows=[
+{l:'Chunk 3',pct:92,c:'#639922'},
+{l:'Chunk 1',pct:78,c:'#1D9E75'},
+{l:'Chunk 5',pct:61,c:'#BA7517'},
+{l:'Chunk 2',pct:34,c:'#D85A30'},
+{l:'Chunk 4',pct:18,c:'#993C1D'},
+];
+let h='<div style="font-size:10px;color:var(--color-text-secondary);margin-bottom:6px">Query: "What is SCADA?" vs all chunks</div>';
+rows.forEach(r=>{
+h+=`<div class="sim-row">
+<span class="sim-label">${r.l}</span>
+<div class="sim-track"><div class="sim-fill" style="width:${r.pct}%;background:${r.c}"></div></div>
+<span class="sim-pct">${r.pct}%</span></div>`;
+});
+document.getElementById('sim-vis').innerHTML=h;
+}
+
+let activeIdx=-1;
+const pl=document.getElementById('pipeline');
+
+stages.forEach((s,i)=>{
+const div=document.createElement('div');
+div.className='stage';
+div.innerHTML=`<div class="node" id="node${i}" style="background:${s.color};border-color:${s.border};--glow:${s.glow}" onclick="select(${i})">
+<div class="node-icon"><i class="ti ${s.icon}" style="color:${s.border}" aria-hidden="true"></i></div>
+<div class="node-label" style="color:${s.text}">${s.label}</div>
+</div>${i<stages.length-1?'<div class="arrow">→</div>':''}`;
+pl.appendChild(div);
+});
+
+window.select=function(i){
+if(activeIdx>=0) document.getElementById('node'+activeIdx).classList.remove('active');
+activeIdx=i;
+const n=document.getElementById('node'+i);
+n.classList.add('active');
+n.style.setProperty('--glow',stages[i].glow);
+document.getElementById('pt').textContent=stages[i].label;
+document.getElementById('ps').textContent=stages[i].lib+' · '+stages[i].desc;
+document.getElementById('ph').style.borderBottomColor='';
+document.getElementById('code-pre').innerHTML=stages[i].code;
+document.getElementById('vis').innerHTML=visuals[stages[i].vis]||'';
+document.getElementById('pb').style.display='grid';
+document.getElementById('tabs').style.display='flex';
+document.getElementById('tabs').style.setProperty('--active-color',stages[i].border);
+document.getElementById('placeholder').style.display='none';
+if(stages[i].vis==='embed') buildVecVis();
+if(stages[i].vis==='faiss') buildFaiss();
+if(stages[i].vis==='retrieve') buildSim();
+};
+
+window.switchTab=function(idx){
+document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===idx));
+document.getElementById('cc').style.display=idx===0?'block':'none';
+document.getElementById('vc').style.display=idx===1?'block':'none';
+};
+</script>
