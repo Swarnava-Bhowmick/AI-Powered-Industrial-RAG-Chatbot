@@ -4,39 +4,62 @@
 > Upload any PDF → Ask questions → Get grounded answers. No hallucinations. No API costs.
 
 ---
-
 ## 📌 Overview
 
-Industrial manuals and technical documents are large and hard to search manually. This project solves that with a **Retrieval-Augmented Generation (RAG)** pipeline that extracts, indexes, and queries PDF content using a fully local LLM stack.
+Industrial environments generate massive volumes of documentation — equipment manuals,
+maintenance SOPs, safety guidelines, research reports, and compliance documents.
+Searching through hundreds of pages manually is slow, error-prone, and inefficient.
+Traditional keyword search fails to understand context, meaning a technician searching
+for "motor overheating fix" might miss a relevant section titled "thermal protection protocol."
+
+This project solves that problem using **Retrieval-Augmented Generation (RAG)** —
+a modern AI architecture that combines the precision of semantic document search
+with the language fluency of a Large Language Model (LLM).
+
+### How It Solves the Problem
+
+Instead of relying on a general-purpose LLM that might hallucinate or produce
+outdated answers, this system **grounds every response in the actual uploaded document**.
+Here is what happens under the hood:
+
+1. **You upload a PDF** — any industrial manual, report, or technical document.
+2. **The system reads and understands it** — text is extracted page by page,
+   then split into overlapping chunks to preserve context at boundaries.
+3. **Every chunk becomes a vector** — using a semantic embedding model
+   (`all-MiniLM-L6-v2`), each chunk is converted into a 384-dimensional
+   numerical representation that captures its meaning, not just its keywords.
+4. **Vectors are stored in FAISS** — a blazing-fast vector database by Meta AI
+   that enables sub-millisecond similarity search across thousands of chunks.
+5. **You ask a question in plain English** — the question is also embedded,
+   and FAISS retrieves the top-4 most semantically similar document chunks.
+6. **LLaMA 3.2 generates the answer** — the retrieved chunks are passed as
+   context to the local LLM, which synthesizes a precise, document-grounded answer.
+7. **The answer appears in the chat UI** — powered by Streamlit, no frontend
+   expertise needed.
+
+### Why This Approach Is Better
+
+| Problem | Traditional Search | This RAG System |
+|---|---|---|
+| Keyword mismatch | ❌ Misses synonyms | ✅ Semantic understanding |
+| LLM hallucination | ❌ Makes things up | ✅ Grounded in your document |
+| API dependency | ❌ Requires internet + cost | ✅ Fully local, $0 cost |
+| Large document search | ❌ Slow manual lookup | ✅ Instant vector retrieval |
+| Domain-specific Q&A | ❌ Generic answers | ✅ Document-specific answers |
+
+### Key Design Decisions
+
+- **Fully Offline** — LLaMA 3.2 runs locally via Ollama. No data leaves your machine.
+  This is critical for industries handling sensitive or proprietary documentation.
+- **No API Costs** — Both the embedding model and the LLM are open-source and
+  run on local hardware. Zero recurring cost at any scale of usage.
+- **Modular Architecture** — Each stage (ingestion, retrieval, generation) is
+  independent. You can swap FAISS for Pinecone, or LLaMA for Mistral, with
+  minimal code changes.
+- **Context-Preserving Chunking** — A 200-character overlap between chunks ensures
+  that sentences split across boundaries are never lost, improving answer accuracy.
 
 **Built for:** ROBO AI Industrial Training Program
-
----
-
-## ⚡ Quick Start
-
-```bash
-# 1. Clone & enter project
-git clone https://github.com/your-username/AI-Industrial-Chatbot.git
-cd AI-Industrial-Chatbot
-
-# 2. Create virtual environment
-python -m venv .venv
-source .venv/bin/activate          # Linux/Mac
-# .venv\Scripts\activate           # Windows
-
-# 3. Install dependencies
-pip install streamlit PyPDF2 langchain langchain-huggingface
-pip install langchain-community faiss-cpu sentence-transformers ollama
-
-# 4. Pull LLaMA 3.2 (requires Ollama installed → https://ollama.com)
-ollama pull llama3.2
-
-# 5. Launch
-streamlit run app.py
-# Opens at → http://localhost:8501
-```
-
 ---
 
 ## 🏗️ System Architecture
@@ -106,48 +129,6 @@ AI-Industrial-Chatbot/
 
 ---
 
-## 🧠 Core Code
-
-**Text Extraction**
-```python
-def extract_text_from_pdf(pdf_path):
-    reader = PdfReader(pdf_path)
-    return "".join(page.extract_text() for page in reader.pages)
-```
-
-**Chunking**
-```python
-splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-chunks = splitter.split_text(text)
-```
-
-**Embedding & Indexing**
-```python
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-vector_store = FAISS.from_texts(chunks, embedding=embeddings)
-vector_store.save_local("faiss_index")
-```
-
-**QA Chain**
-```python
-retriever = vector_store.as_retriever()          # top-4 chunks
-llm       = Ollama(model="llama3.2")
-qa_chain  = RetrievalQA(retriever=retriever,
-                        combine_documents_chain=load_qa_chain(llm, "stuff"))
-```
-
-**Prompt Template (LangChain default)**
-```
-Use the following context to answer the question.
-If you don't know the answer, say you don't know.
-
-Context: {context}
-Question: {question}
-Answer:
-```
-
----
-
 ## 📊 Performance Characteristics
 
 | Metric | Value |
@@ -174,33 +155,6 @@ Answer:
 
 ---
 
-## 🔮 Roadmap
-
-| Status | Feature |
-|---|---|
-| ✅ | PDF upload & semantic Q&A |
-| ✅ | Fully offline, zero API cost |
-| 🔲 | DOCX / XLSX / HTML / OCR support |
-| 🔲 | Multi-PDF simultaneous querying |
-| 🔲 | Chat history & session memory |
-| 🔲 | Pinecone / Weaviate cloud scaling |
-| 🔲 | Fine-tuning on domain corpus |
-| 🔲 | User auth & role-based access |
-| 🔲 | Citation-based answers with source highlighting |
-| 🔲 | Cloud deployment |
-
----
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a branch: `git checkout -b feature/your-feature`
-3. Commit changes: `git commit -m "Add your feature"`
-4. Push: `git push origin feature/your-feature`
-5. Open a Pull Request
-
----
-
 ## 📜 License
 
 MIT License — free to use, modify, and distribute.
@@ -209,9 +163,7 @@ MIT License — free to use, modify, and distribute.
 
 ## 👨‍💻 Author
 
-**Swarnav** · B.Sc. Physics, Mathematics & Electronics
-
-Interests: AI · Robotics · Physics · Mathematics · Scientific Computing · Open Source
+**Swarnava Bhowmick**
 
 ---
 
